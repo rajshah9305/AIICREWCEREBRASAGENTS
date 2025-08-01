@@ -51,7 +51,7 @@ const Header = ({ onMenuClick }) => {
       animate={{ y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="container flex h-16 items-center justify-between px-4">
+      <div className="flex h-16 items-center justify-between px-4 w-full max-w-none">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
           <Button
@@ -74,7 +74,7 @@ const Header = ({ onMenuClick }) => {
         </div>
 
         {/* Center Section - Search */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
+        <div className="hidden md:flex flex-1 max-w-md mx-4 lg:mx-8">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input

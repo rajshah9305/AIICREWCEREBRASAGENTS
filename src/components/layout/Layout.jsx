@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import useUIStore from '../../stores/uiStore';
+import { cn } from '../../utils/helpers';
 
 const Layout = ({ children }) => {
   const { 
@@ -75,15 +76,17 @@ const Layout = ({ children }) => {
         <Header onMenuClick={handleMenuClick} />
 
         {/* Main Content Area */}
-        <main className="flex-1 p-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="h-full"
-          >
-            {children}
-          </motion.div>
+        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="h-full"
+            >
+              {children}
+            </motion.div>
+          </div>
         </main>
       </div>
 

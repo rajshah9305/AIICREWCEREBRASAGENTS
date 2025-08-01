@@ -284,13 +284,36 @@ export const measurePerformance = (fn, name = 'Function') => {
   const start = performance.now();
   const result = fn();
   const end = performance.now();
-  console.log(`${name} took ${end - start} milliseconds`);
+  // Sanitize name to prevent log injection
+  const sanitizedName = encodeURIComponent(name);
+  console.log(`${sanitizedName} took ${end - start} milliseconds`);
   return result;
+};
+
+// Authorization utility
+export const checkAuthorization = (requiredRole = null) => {
+  // Check if user is authenticated
+  const token = getFromStorage('authToken');
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  // If specific role is required, check user role
+  if (requiredRole) {
+    const userRole = getFromStorage('userRole');
+    if (userRole !== requiredRole && userRole !== 'admin') {
+      throw new Error('Insufficient permissions');
+    }
+  }
+  
+  return true;
 };
 
 // Error handling utilities
 export const handleError = (error, context = '') => {
-  console.error(`Error in ${context}:`, error);
+  // Sanitize context to prevent log injection
+  const sanitizedContext = encodeURIComponent(context);
+  console.error(`Error in ${sanitizedContext}:`, error.message || 'Unknown error');
   
   if (error.response) {
     // Server responded with error status

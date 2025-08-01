@@ -4,11 +4,60 @@ import { crewAPI } from '../utils/api';
 import { generateId, deepClone } from '../utils/helpers';
 import { DEFAULT_AGENTS, DEFAULT_TASKS } from '../utils/constants';
 
+// Mock data for development
+const mockCrews = [
+  {
+    id: '1',
+    name: 'Research & Analysis Team',
+    description: 'Multi-agent research workflow with analyst, researcher, and writer',
+    status: 'active',
+    agents: 3,
+    tasks: 5,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    category: 'Research',
+    rating: 4.8,
+    featured: true,
+    executions: 12,
+    lastExecuted: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+  },
+  {
+    id: '2',
+    name: 'Content Creation Squad',
+    description: 'SEO-optimized content creation with strategist and editor',
+    status: 'active',
+    agents: 2,
+    tasks: 4,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    category: 'Marketing',
+    rating: 4.6,
+    featured: false,
+    executions: 8,
+    lastExecuted: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+  },
+  {
+    id: '3',
+    name: 'Code Review Team',
+    description: 'Automated code review with security and performance analysis',
+    status: 'idle',
+    agents: 3,
+    tasks: 6,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    category: 'Development',
+    rating: 4.9,
+    featured: true,
+    executions: 15,
+    lastExecuted: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+  }
+];
+
 const useCrewStore = create(
   persist(
     (set, get) => ({
       // State
-      crews: [],
+      crews: mockCrews, // Start with mock data
       agents: [],
       tasks: [],
       templates: [],
@@ -28,10 +77,13 @@ const useCrewStore = create(
       fetchCrews: async () => {
         set({ isLoading: true, error: null });
         try {
+          // Try to fetch from API, fallback to mock data
           const response = await crewAPI.getCrews();
           set({ crews: response.data, isLoading: false });
         } catch (error) {
-          set({ error: error.message, isLoading: false });
+          // If API fails, use mock data
+          console.log('Using mock data for crews');
+          set({ crews: mockCrews, isLoading: false });
         }
       },
       
@@ -39,6 +91,7 @@ const useCrewStore = create(
       createCrew: async (crewData) => {
         set({ isLoading: true, error: null });
         try {
+          // Try to create via API
           const response = await crewAPI.createCrew(crewData);
           const newCrew = response.data;
           set((state) => ({
@@ -48,8 +101,23 @@ const useCrewStore = create(
           }));
           return newCrew;
         } catch (error) {
-          set({ error: error.message, isLoading: false });
-          throw error;
+          // If API fails, create locally
+          console.log('Creating crew locally');
+          const newCrew = {
+            id: generateId(),
+            ...crewData,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            executions: 0,
+            lastExecuted: null,
+          };
+          set((state) => ({
+            crews: [...state.crews, newCrew],
+            currentCrew: newCrew,
+            isLoading: false,
+          }));
+          return newCrew;
         }
       },
       
@@ -68,8 +136,19 @@ const useCrewStore = create(
           }));
           return updatedCrew;
         } catch (error) {
-          set({ error: error.message, isLoading: false });
-          throw error;
+          // If API fails, update locally
+          console.log('Updating crew locally');
+          set((state) => ({
+            crews: state.crews.map((crew) =>
+              crew.id === crewId 
+                ? { ...crew, ...updates, updatedAt: new Date().toISOString() }
+                : crew
+            ),
+            currentCrew: state.currentCrew?.id === crewId 
+              ? { ...state.currentCrew, ...updates, updatedAt: new Date().toISOString() }
+              : state.currentCrew,
+            isLoading: false,
+          }));
         }
       },
       
@@ -84,8 +163,13 @@ const useCrewStore = create(
             isLoading: false,
           }));
         } catch (error) {
-          set({ error: error.message, isLoading: false });
-          throw error;
+          // If API fails, delete locally
+          console.log('Deleting crew locally');
+          set((state) => ({
+            crews: state.crews.filter((crew) => crew.id !== crewId),
+            currentCrew: state.currentCrew?.id === crewId ? null : state.currentCrew,
+            isLoading: false,
+          }));
         }
       },
       

@@ -213,7 +213,7 @@ const Sidebar = ({ isCollapsed = false }) => {
   return (
     <motion.aside
       className={cn(
-        'flex flex-col bg-background border-r transition-all duration-300',
+        'fixed left-0 top-0 z-30 h-full flex flex-col bg-background border-r transition-all duration-300 lg:relative lg:z-auto',
         isCollapsed ? 'w-16' : 'w-64'
       )}
       initial={{ x: -100 }}
@@ -243,7 +243,7 @@ const Sidebar = ({ isCollapsed = false }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         <div className="space-y-1">
           {navigationItems.map(renderNavItem)}
         </div>

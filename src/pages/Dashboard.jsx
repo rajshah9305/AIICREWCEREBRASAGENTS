@@ -1,56 +1,67 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Users, 
   Play, 
-  CheckCircle, 
-  AlertCircle, 
+  BarChart3, 
   Clock, 
-  TrendingUp,
+  TrendingUp, 
   Activity,
+  Cpu,
+  HardDrive,
+  Wifi,
+  Database,
   Zap,
-  BarChart3,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownRight
+  Target,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  PauseCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import useCrewStore from '../stores/crewStore';
 import useExecutionStore from '../stores/executionStore';
 import useUIStore from '../stores/uiStore';
-import { formatNumber, formatRelativeTime } from '../utils/helpers';
-import { EXECUTION_STATUS } from '../utils/constants';
+import { formatDateTime, formatRelativeTime, formatNumber } from '../utils/helpers';
 
 const Dashboard = () => {
   const { crews, isLoading: crewsLoading } = useCrewStore();
-  const { 
-    executions, 
-    systemMetrics, 
-    getExecutionStats,
-    isLoading: executionsLoading 
-  } = useExecutionStore();
+  const { executions, systemMetrics, isLoading: executionsLoading } = useExecutionStore();
   const { addNotification } = useUIStore();
-  
-  const [stats, setStats] = useState({
-    totalCrews: 0,
-    totalExecutions: 0,
-    successRate: 0,
-    avgExecutionTime: 0,
-  });
 
-  useEffect(() => {
-    const executionStats = getExecutionStats();
-    setStats({
-      totalCrews: crews.length,
-      totalExecutions: executionStats.total,
-      successRate: executionStats.successRate,
-      avgExecutionTime: 0, // Calculate from actual data
-    });
-  }, [crews, executions, getExecutionStats]);
-
-  const recentExecutions = executions.slice(0, 5);
-  const recentCrews = crews.slice(0, 3);
+  const [recentActivities, setRecentActivities] = useState([
+    {
+      id: 1,
+      type: 'execution',
+      title: 'Research & Analysis Team',
+      description: 'Execution completed successfully',
+      timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
+      status: 'completed',
+      icon: CheckCircle,
+      color: 'text-green-500'
+    },
+    {
+      id: 2,
+      type: 'crew',
+      title: 'Content Creation Squad',
+      description: 'New crew created',
+      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
+      status: 'created',
+      icon: Users,
+      color: 'text-blue-500'
+    },
+    {
+      id: 3,
+      type: 'execution',
+      title: 'Code Review Team',
+      description: 'Execution started',
+      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
+      status: 'running',
+      icon: Play,
+      color: 'text-yellow-500'
+    }
+  ]);
 
   const handleQuickAction = (action) => {
     addNotification({
@@ -63,63 +74,71 @@ const Dashboard = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case EXECUTION_STATUS.COMPLETED:
-        return 'text-green-600 bg-green-100';
-      case EXECUTION_STATUS.RUNNING:
-        return 'text-blue-600 bg-blue-100';
-      case EXECUTION_STATUS.FAILED:
-        return 'text-red-600 bg-red-100';
-      case EXECUTION_STATUS.PENDING:
-        return 'text-yellow-600 bg-yellow-100';
+      case 'completed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'running':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'failed':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'pending':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case EXECUTION_STATUS.COMPLETED:
-        return <CheckCircle className="h-4 w-4" />;
-      case EXECUTION_STATUS.RUNNING:
-        return <Activity className="h-4 w-4" />;
-      case EXECUTION_STATUS.FAILED:
-        return <AlertCircle className="h-4 w-4" />;
-      case EXECUTION_STATUS.PENDING:
-        return <Clock className="h-4 w-4" />;
+      case 'completed':
+        return CheckCircle;
+      case 'running':
+        return Play;
+      case 'failed':
+        return XCircle;
+      case 'pending':
+        return Clock;
       default:
-        return <Clock className="h-4 w-4" />;
+        return AlertCircle;
     }
   };
+
+  // Calculate statistics
+  const totalCrews = crews.length;
+  const activeExecutions = executions.filter(e => e.status === 'running').length;
+  const completedExecutions = executions.filter(e => e.status === 'completed').length;
+  const successRate = totalCrews > 0 ? ((completedExecutions / totalCrews) * 100).toFixed(1) : 0;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome to your CrewAI Dashboard. Monitor your crews and executions.
+            Overview of your CrewAI operations and system status
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button
-            onClick={() => handleQuickAction('Create New Crew')}
+            variant="outline"
+            onClick={() => handleQuickAction('Create Crew')}
             icon={<Users className="h-4 w-4" />}
+            className="w-full sm:w-auto"
           >
             Create Crew
           </Button>
           <Button
-            variant="outline"
-            onClick={() => handleQuickAction('View Analytics')}
-            icon={<BarChart3 className="h-4 w-4" />}
+            onClick={() => handleQuickAction('Start Execution')}
+            icon={<Play className="h-4 w-4" />}
+            className="w-full sm:w-auto"
           >
-            Analytics
+            Start Execution
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Statistics Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -131,9 +150,9 @@ const Dashboard = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(stats.totalCrews)}</div>
+              <div className="text-2xl font-bold">{totalCrews}</div>
               <p className="text-xs text-muted-foreground">
-                +{Math.floor(Math.random() * 5) + 1} from last month
+                Active AI agent teams
               </p>
             </CardContent>
           </Card>
@@ -146,13 +165,13 @@ const Dashboard = () => {
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Executions</CardTitle>
+              <CardTitle className="text-sm font-medium">Active Executions</CardTitle>
               <Play className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(stats.totalExecutions)}</div>
+              <div className="text-2xl font-bold">{activeExecutions}</div>
               <p className="text-xs text-muted-foreground">
-                +{Math.floor(Math.random() * 10) + 5} from last week
+                Currently running
               </p>
             </CardContent>
           </Card>
@@ -169,9 +188,9 @@ const Dashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.successRate.toFixed(1)}%</div>
+              <div className="text-2xl font-bold">{successRate}%</div>
               <p className="text-xs text-muted-foreground">
-                +2.1% from last month
+                Completed successfully
               </p>
             </CardContent>
           </Card>
@@ -184,13 +203,13 @@ const Dashboard = () => {
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Execution Time</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Executions</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2.4s</div>
+              <div className="text-2xl font-bold">{executions.length}</div>
               <p className="text-xs text-muted-foreground">
-                -0.3s from last week
+                All time executions
               </p>
             </CardContent>
           </Card>
@@ -198,217 +217,156 @@ const Dashboard = () => {
       </div>
 
       {/* System Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{systemMetrics.cpu}%</div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div 
-                className="bg-blue-600 h-2 rounded-full" 
-                style={{ width: `${systemMetrics.cpu}%` }}
-              ></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Memory Usage</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{systemMetrics.memory}%</div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div 
-                className="bg-green-600 h-2 rounded-full" 
-                style={{ width: `${systemMetrics.memory}%` }}
-              ></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Network</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{systemMetrics.network}%</div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div 
-                className="bg-yellow-600 h-2 rounded-full" 
-                style={{ width: `${systemMetrics.network}%` }}
-              ></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disk Usage</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{systemMetrics.disk}%</div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div 
-                className="bg-purple-600 h-2 rounded-full" 
-                style={{ width: `${systemMetrics.disk}%` }}
-              ></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Recent Executions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+      >
         <Card>
           <CardHeader>
-            <CardTitle>Recent Executions</CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+              <Zap className="h-5 w-5" />
+              <span>System Metrics</span>
+            </CardTitle>
             <CardDescription>
-              Latest crew executions and their status
+              Real-time system performance and resource usage
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex items-center space-x-2">
+                <Cpu className="h-4 w-4 text-blue-500" />
+                <div>
+                  <p className="text-sm font-medium">CPU Usage</p>
+                  <p className="text-xs text-muted-foreground">{systemMetrics.cpu}%</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Database className="h-4 w-4 text-green-500" />
+                <div>
+                  <p className="text-sm font-medium">Memory Usage</p>
+                  <p className="text-xs text-muted-foreground">{systemMetrics.memory}%</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Wifi className="h-4 w-4 text-purple-500" />
+                <div>
+                  <p className="text-sm font-medium">Network Usage</p>
+                  <p className="text-xs text-muted-foreground">{systemMetrics.network}%</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <HardDrive className="h-4 w-4 text-orange-500" />
+                <div>
+                  <p className="text-sm font-medium">Disk Usage</p>
+                  <p className="text-xs text-muted-foreground">{systemMetrics.disk}%</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Recent Activities */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Activity className="h-5 w-5" />
+              <span>Recent Activities</span>
+            </CardTitle>
+            <CardDescription>
+              Latest crew executions and system activities
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentExecutions.length > 0 ? (
-                recentExecutions.map((execution, index) => (
+              {recentActivities.map((activity, index) => {
+                const IconComponent = activity.icon;
+                return (
                   <motion.div
-                    key={execution.id}
+                    key={activity.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center justify-between p-3 rounded-lg border"
+                    transition={{ delay: 0.1 * index }}
+                    className="flex items-center space-x-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-full ${getStatusColor(execution.status)}`}>
-                        {getStatusIcon(execution.status)}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {execution.crew_name || 'Unknown Crew'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatRelativeTime(execution.created_at)}
-                        </p>
-                      </div>
+                    <div className={`p-2 rounded-full bg-muted ${activity.color}`}>
+                      <IconComponent className="h-4 w-4" />
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-medium capitalize">
-                        {execution.status}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {execution.duration ? `${execution.duration}s` : 'N/A'}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground">{activity.description}</p>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatRelativeTime(activity.timestamp)}
                     </div>
                   </motion.div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Play className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No executions yet</p>
-                  <p className="text-sm">Create a crew and start executing</p>
-                </div>
-              )}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
-
-        {/* Recent Crews */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Crews</CardTitle>
-            <CardDescription>
-              Your most recently created or modified crews
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentCrews.length > 0 ? (
-                recentCrews.map((crew, index) => (
-                  <motion.div
-                    key={crew.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer"
-                    onClick={() => {
-                      addNotification({
-                        type: 'info',
-                        title: 'Crew Selected',
-                        message: `Selected crew: ${crew.name}`,
-                        duration: 2000,
-                      });
-                    }}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-full bg-primary/10">
-                        <Users className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{crew.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {crew.agents?.length || 0} agents, {crew.tasks?.length || 0} tasks
-                        </p>
-                      </div>
-                    </div>
-                    <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-                  </motion.div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No crews yet</p>
-                  <p className="text-sm">Create your first crew to get started</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      </motion.div>
 
       {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>
-            Common actions to get you started quickly
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Button
-              variant="outline"
-              className="h-20 flex-col space-y-2"
-              onClick={() => handleQuickAction('Create New Crew')}
-            >
-              <Users className="h-6 w-6" />
-              <span>Create Crew</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-20 flex-col space-y-2"
-              onClick={() => handleQuickAction('Import Crew')}
-            >
-              <Calendar className="h-6 w-6" />
-              <span>Import Crew</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-20 flex-col space-y-2"
-              onClick={() => handleQuickAction('View Analytics')}
-            >
-              <BarChart3 className="h-6 w-6" />
-              <span>Analytics</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Target className="h-5 w-5" />
+              <span>Quick Actions</span>
+            </CardTitle>
+            <CardDescription>
+              Common actions to get started quickly
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <Button
+                variant="outline"
+                onClick={() => handleQuickAction('Create New Crew')}
+                className="justify-start"
+                icon={<Users className="h-4 w-4" />}
+              >
+                Create New Crew
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleQuickAction('Import Crew')}
+                className="justify-start"
+                icon={<Database className="h-4 w-4" />}
+              >
+                Import Crew
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleQuickAction('View Analytics')}
+                className="justify-start"
+                icon={<BarChart3 className="h-4 w-4" />}
+              >
+                View Analytics
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleQuickAction('System Settings')}
+                className="justify-start"
+                icon={<Zap className="h-4 w-4" />}
+              >
+                System Settings
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 };

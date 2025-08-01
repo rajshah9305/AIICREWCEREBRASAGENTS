@@ -27,6 +27,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle network errors gracefully
+    if (error.code === 'ERR_NETWORK') {
+      console.log('Network error - using mock data');
+      return Promise.reject(new Error('Network error - using mock data'));
+    }
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
       window.location.href = '/login';
@@ -38,79 +44,92 @@ api.interceptors.response.use(
 // CrewAI API endpoints
 export const crewAPI = {
   // Crew management
-  getCrews: () => api.get('/crews'),
-  getCrew: (id) => api.get(`/crews/${id}`),
-  createCrew: (data) => api.post('/crews', data),
-  updateCrew: (id, data) => api.put(`/crews/${id}`, data),
-  deleteCrew: (id) => api.delete(`/crews/${id}`),
+  getCrews: () => api.get('/api/v1/crews'),
+  getCrew: (id) => api.get(`/api/v1/crews/${id}`),
+  createCrew: (data) => api.post('/api/v1/crews', data),
+  updateCrew: (id, data) => api.put(`/api/v1/crews/${id}`, data),
+  deleteCrew: (id) => api.delete(`/api/v1/crews/${id}`),
   
   // Execution
-  executeCrew: (id, params) => api.post(`/crews/${id}/execute`, params),
-  getExecutionStatus: (executionId) => api.get(`/executions/${executionId}`),
-  getExecutionLogs: (executionId) => api.get(`/executions/${executionId}/logs`),
+  executeCrew: (id, params) => api.post(`/api/v1/crews/${id}/execute`, params),
+  getExecutionStatus: (executionId) => api.get(`/api/v1/executions/${executionId}`),
+  getExecutionLogs: (executionId) => api.get(`/api/v1/executions/${executionId}/logs`),
   
   // Agents
-  getAgents: () => api.get('/agents'),
-  createAgent: (data) => api.post('/agents', data),
-  updateAgent: (id, data) => api.put(`/agents/${id}`, data),
-  deleteAgent: (id) => api.delete(`/agents/${id}`),
+  getAgents: () => api.get('/api/v1/agents'),
+  createAgent: (data) => api.post('/api/v1/agents', data),
+  updateAgent: (id, data) => api.put(`/api/v1/agents/${id}`, data),
+  deleteAgent: (id) => api.delete(`/api/v1/agents/${id}`),
   
   // Tasks
-  getTasks: () => api.get('/tasks'),
-  createTask: (data) => api.post('/tasks', data),
-  updateTask: (id, data) => api.put(`/tasks/${id}`, data),
-  deleteTask: (id) => api.delete(`/tasks/${id}`),
+  getTasks: () => api.get('/api/v1/tasks'),
+  createTask: (data) => api.post('/api/v1/tasks', data),
+  updateTask: (id, data) => api.put(`/api/v1/tasks/${id}`, data),
+  deleteTask: (id) => api.delete(`/api/v1/tasks/${id}`),
   
   // Templates
-  getTemplates: () => api.get('/templates'),
-  getTemplate: (id) => api.get(`/templates/${id}`),
-  createTemplate: (data) => api.post('/templates', data),
-  updateTemplate: (id, data) => api.put(`/templates/${id}`, data),
-  deleteTemplate: (id) => api.delete(`/templates/${id}`),
+  getTemplates: () => api.get('/api/v1/templates'),
+  getTemplate: (id) => api.get(`/api/v1/templates/${id}`),
+  createTemplate: (data) => api.post('/api/v1/templates', data),
+  updateTemplate: (id, data) => api.put(`/api/v1/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/api/v1/templates/${id}`),
 };
 
 // Cerebras API endpoints
 export const cerebrasAPI = {
   // Model information
-  getModels: () => api.get('/cerebras/models'),
-  getModelInfo: (modelId) => api.get(`/cerebras/models/${modelId}`),
+  getModels: () => api.get('/api/v1/cerebras/models'),
+  getModelInfo: (modelId) => api.get(`/api/v1/cerebras/models/${modelId}`),
   
   // Inference
-  generateText: (params) => api.post('/cerebras/generate', params),
-  chatCompletion: (params) => api.post('/cerebras/chat', params),
+  generateText: (params) => api.post('/api/v1/cerebras/generate', params),
+  chatCompletion: (params) => api.post('/api/v1/cerebras/chat', params),
   
   // Model status
-  getModelStatus: (modelId) => api.get(`/cerebras/models/${modelId}/status`),
+  getModelStatus: (modelId) => api.get(`/api/v1/cerebras/models/${modelId}/status`),
 };
 
 // Analytics API endpoints
 export const analyticsAPI = {
-  getExecutionStats: (filters) => api.get('/analytics/executions', { params: filters }),
-  getPerformanceMetrics: (crewId) => api.get(`/analytics/crews/${crewId}/performance`),
-  getSystemMetrics: () => api.get('/analytics/system'),
-  getUsageStats: (period) => api.get('/analytics/usage', { params: { period } }),
+  getExecutionStats: (filters) => api.get('/api/v1/analytics/executions', { params: filters }),
+  getPerformanceMetrics: (crewId) => api.get(`/api/v1/analytics/crews/${crewId}/performance`),
+  getSystemMetrics: () => api.get('/api/v1/system/metrics'),
+  getUsageStats: (period) => api.get('/api/v1/analytics/usage', { params: { period } }),
 };
 
 // System API endpoints
 export const systemAPI = {
-  getSystemInfo: () => api.get('/system/info'),
-  getSystemHealth: () => api.get('/system/health'),
-  getSystemMetrics: () => api.get('/system/metrics'),
-  updateSettings: (settings) => api.put('/system/settings', settings),
-  getSettings: () => api.get('/system/settings'),
+  getSystemInfo: () => api.get('/api/v1/system/info'),
+  getSystemHealth: () => api.get('/api/v1/system/health'),
+  getSystemMetrics: () => api.get('/api/v1/system/metrics'),
+  updateSettings: (settings) => api.put('/api/v1/system/settings', settings),
+  getSettings: () => api.get('/api/v1/system/settings'),
 };
 
-// WebSocket connection for real-time updates
+// WebSocket connection
 export const createWebSocket = (executionId) => {
   const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
-  const ws = new WebSocket(`${wsUrl}/executions/${executionId}`);
+  const ws = new WebSocket(wsUrl);
   
   ws.onopen = () => {
     console.log('WebSocket connected');
+    ws.send(JSON.stringify({
+      type: 'subscribe',
+      execution_id: executionId
+    }));
+  };
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('WebSocket message:', data);
   };
   
   ws.onerror = (error) => {
     console.error('WebSocket error:', error);
+  };
+  
+  ws.onclose = () => {
+    console.log('WebSocket disconnected');
   };
   
   return ws;
@@ -121,21 +140,23 @@ export const uploadFile = async (file, onProgress) => {
   const formData = new FormData();
   formData.append('file', file);
   
-  return api.post('/upload', formData, {
+  return api.post('/api/v1/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
     onUploadProgress: (progressEvent) => {
-      const percentCompleted = Math.round(
-        (progressEvent.loaded * 100) / progressEvent.total
-      );
-      onProgress?.(percentCompleted);
+      if (onProgress) {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+        onProgress(percentCompleted);
+      }
     },
   });
 };
 
 // Export/Import utilities
-export const exportCrew = (crewId) => api.get(`/crews/${crewId}/export`);
-export const importCrew = (data) => api.post('/crews/import', data);
+export const exportCrew = (crewId) => api.get(`/api/v1/crews/${crewId}/export`);
+export const importCrew = (data) => api.post('/api/v1/crews/import', data);
 
 export default api; 
