@@ -1,494 +1,281 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Settings as SettingsIcon, 
-  User, 
-  Bell, 
   Palette, 
-  Monitor, 
-  Database,
+  Key, 
+  Bell, 
   Shield,
-  Globe,
   Save,
-  RefreshCw,
-  Download,
-  Upload
+  Zap
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Modal from '../components/ui/Modal';
-import useUIStore from '../stores/uiStore';
-import { THEMES } from '../utils/constants';
+import toast from 'react-hot-toast';
+import useAppStore from '../stores/appStore';
 
 const Settings = () => {
-  const { 
-    preferences, 
-    updatePreference, 
-    resetPreferences,
-    theme,
-    setTheme,
-    addNotification 
-  } = useUIStore();
+  const { theme, setTheme, settings, updateSettings } = useAppStore();
 
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-
-  const handlePreferenceChange = (key, value) => {
-    updatePreference(key, value);
-    addNotification({
-      type: 'success',
-      title: 'Setting Updated',
-      message: `${key} has been updated`,
-      duration: 2000,
-    });
+  const handleSave = () => {
+    toast.success('Settings saved successfully');
   };
 
-  const handleThemeChange = (newTheme) => {
-    setTheme(newTheme);
-    addNotification({
-      type: 'success',
-      title: 'Theme Updated',
-      message: `Switched to ${newTheme} theme`,
-      duration: 2000,
-    });
-  };
-
-  const handleResetPreferences = () => {
-    resetPreferences();
-    addNotification({
-      type: 'success',
-      title: 'Settings Reset',
-      message: 'All settings have been reset to defaults',
-      duration: 3000,
-    });
-  };
-
-  const handleExportSettings = () => {
-    const settingsData = {
-      preferences,
-      theme,
-      exported_at: new Date().toISOString(),
-    };
-    
-    const blob = new Blob([JSON.stringify(settingsData, null, 2)], {
-      type: 'application/json',
-    });
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `crewai-settings-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    addNotification({
-      type: 'success',
-      title: 'Settings Exported',
-      message: 'Settings have been exported successfully',
-      duration: 3000,
-    });
-  };
-
-  const handleImportSettings = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const settingsData = JSON.parse(e.target.result);
-        // Apply imported settings
-        Object.entries(settingsData.preferences).forEach(([key, value]) => {
-          updatePreference(key, value);
-        });
-        if (settingsData.theme) {
-          setTheme(settingsData.theme);
+  const settingSections = [
+    {
+      title: 'Appearance',
+      icon: Palette,
+      color: 'from-purple-500 to-purple-600',
+      settings: [
+        {
+          label: 'Theme',
+          type: 'select',
+          key: 'theme',
+          value: theme,
+          onChange: setTheme,
+          options: [
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+            { value: 'system', label: 'System' }
+          ]
         }
-        
-        addNotification({
-          type: 'success',
-          title: 'Settings Imported',
-          message: 'Settings have been imported successfully',
-          duration: 3000,
-        });
-      } catch (error) {
-        addNotification({
-          type: 'error',
-          title: 'Import Failed',
-          message: 'Failed to import settings. Please check the file format.',
-          duration: 3000,
-        });
-      }
-    };
-    reader.readAsText(file);
+      ]
+    },
+    {
+      title: 'API Configuration',
+      icon: Key,
+      color: 'from-blue-500 to-blue-600',
+      settings: [
+        {
+          label: 'Cerebras API Key',
+          type: 'password',
+          key: 'apiKey',
+          value: settings.apiKey,
+          onChange: (value) => updateSettings({ apiKey: value }),
+          placeholder: 'Enter your Cerebras API key'
+        },
+        {
+          label: 'Default Model',
+          type: 'select',
+          key: 'model',
+          value: settings.model,
+          onChange: (value) => updateSettings({ model: value }),
+          options: [
+            { value: 'llama-3.1-8b', label: 'Llama 3.1 8B' },
+            { value: 'llama-3.1-70b', label: 'Llama 3.1 70B' },
+            { value: 'gpt-4', label: 'GPT-4' }
+          ]
+        },
+        {
+          label: 'Max Tokens',
+          type: 'number',
+          key: 'maxTokens',
+          value: settings.maxTokens,
+          onChange: (value) => updateSettings({ maxTokens: parseInt(value) }),
+          min: 100,
+          max: 8000
+        },
+        {
+          label: 'Temperature',
+          type: 'range',
+          key: 'temperature',
+          value: settings.temperature,
+          onChange: (value) => updateSettings({ temperature: parseFloat(value) }),
+          min: 0,
+          max: 1,
+          step: 0.1
+        }
+      ]
+    },
+    {
+      title: 'Notifications',
+      icon: Bell,
+      color: 'from-green-500 to-green-600',
+      settings: [
+        {
+          label: 'Enable Notifications',
+          type: 'toggle',
+          key: 'notifications',
+          value: settings.notifications,
+          onChange: (value) => updateSettings({ notifications: value })
+        }
+      ]
+    },
+    {
+      title: 'General',
+      icon: SettingsIcon,
+      color: 'from-orange-500 to-orange-600',
+      settings: [
+        {
+          label: 'Auto Save',
+          type: 'toggle',
+          key: 'autoSave',
+          value: settings.autoSave,
+          onChange: (value) => updateSettings({ autoSave: value })
+        }
+      ]
+    }
+  ];
+
+  const renderSetting = (setting) => {
+    switch (setting.type) {
+      case 'select':
+        return (
+          <select
+            value={setting.value}
+            onChange={(e) => setting.onChange(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          >
+            {setting.options.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        );
+      
+      case 'password':
+        return (
+          <input
+            type="password"
+            value={setting.value}
+            onChange={(e) => setting.onChange(e.target.value)}
+            placeholder={setting.placeholder}
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+        );
+      
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={setting.value}
+            onChange={(e) => setting.onChange(e.target.value)}
+            min={setting.min}
+            max={setting.max}
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+        );
+      
+      case 'range':
+        return (
+          <div className="space-y-2">
+            <input
+              type="range"
+              value={setting.value}
+              onChange={(e) => setting.onChange(e.target.value)}
+              min={setting.min}
+              max={setting.max}
+              step={setting.step}
+              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="text-center text-sm text-slate-600 dark:text-slate-400">
+              {setting.value}
+            </div>
+          </div>
+        );
+      
+      case 'toggle':
+        return (
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={setting.value}
+              onChange={(e) => setting.onChange(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
+          </label>
+        );
+      
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">
-            Configure your CrewAI Dashboard preferences and system settings
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+            Settings
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Configure your CrewAI Dashboard preferences and integrations.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={handleExportSettings}
-            icon={<Download className="h-4 w-4" />}
-            className="w-full sm:w-auto"
-          >
-            Export
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setIsImportModalOpen(true)}
-            icon={<Upload className="h-4 w-4" />}
-            className="w-full sm:w-auto"
-          >
-            Import
-          </Button>
-        </div>
+        <button
+          onClick={handleSave}
+          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
+        >
+          <Save className="w-5 h-5" />
+          <span>Save Changes</span>
+        </button>
       </div>
 
       {/* Settings Sections */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Appearance Settings */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Palette className="h-5 w-5" />
-                <span>Appearance</span>
-              </CardTitle>
-              <CardDescription>
-                Customize the look and feel of your dashboard
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Theme</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(THEMES).map(([key, value]) => (
-                    <button
-                      key={key}
-                      onClick={() => handleThemeChange(value)}
-                      className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
-                        theme === value
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background hover:bg-accent'
-                      }`}
-                    >
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
-                    </button>
-                  ))}
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {settingSections.map((section, sectionIndex) => (
+          <motion.div
+            key={section.title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: sectionIndex * 0.1 }}
+            className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200 dark:border-slate-700"
+          >
+            <div className="flex items-center space-x-3 mb-6">
+              <div className={`w-10 h-10 bg-gradient-to-r ${section.color} rounded-xl flex items-center justify-center`}>
+                <section.icon className="w-5 h-5 text-white" />
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Compact Mode</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={preferences.compactMode}
-                    onChange={(e) => handlePreferenceChange('compactMode', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    Use compact layout for better space utilization
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Notification Settings */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Bell className="h-5 w-5" />
-                <span>Notifications</span>
-              </CardTitle>
-              <CardDescription>
-                Configure notification preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Show Notifications</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={preferences.showNotifications}
-                    onChange={(e) => handlePreferenceChange('showNotifications', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    Display toast notifications
-                  </span>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Sound Enabled</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={preferences.soundEnabled}
-                    onChange={(e) => handlePreferenceChange('soundEnabled', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    Play sounds for notifications
-                  </span>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Refresh Interval (seconds)</label>
-                <Input
-                  type="number"
-                  value={preferences.refreshInterval}
-                  onChange={(e) => handlePreferenceChange('refreshInterval', parseInt(e.target.value))}
-                  min="5"
-                  max="300"
-                  className="w-32"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* System Settings */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <SettingsIcon className="h-5 w-5" />
-                <span>System</span>
-              </CardTitle>
-              <CardDescription>
-                Configure system behavior and performance
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Auto Save</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={preferences.autoSave}
-                    onChange={(e) => handlePreferenceChange('autoSave', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    Automatically save changes
-                  </span>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Auto Refresh</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={preferences.autoRefresh}
-                    onChange={(e) => handlePreferenceChange('autoRefresh', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    Automatically refresh data
-                  </span>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Show Timestamps</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={preferences.showTimestamps}
-                    onChange={(e) => handlePreferenceChange('showTimestamps', e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    Display timestamps in logs
-                  </span>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Log Level</label>
-                <select
-                  value={preferences.logLevel}
-                  onChange={(e) => handlePreferenceChange('logLevel', e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {section.title}
+              </h3>
+            </div>
+            
+            <div className="space-y-6">
+              {section.settings.map((setting, settingIndex) => (
+                <motion.div
+                  key={setting.key}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: (sectionIndex * 0.1) + (settingIndex * 0.05) }}
+                  className="space-y-2"
                 >
-                  <option value="debug">Debug</option>
-                  <option value="info">Info</option>
-                  <option value="warning">Warning</option>
-                  <option value="error">Error</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Max Log Entries</label>
-                <Input
-                  type="number"
-                  value={preferences.maxLogEntries}
-                  onChange={(e) => handlePreferenceChange('maxLogEntries', parseInt(e.target.value))}
-                  min="100"
-                  max="10000"
-                  className="w-32"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Regional Settings */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Globe className="h-5 w-5" />
-                <span>Regional</span>
-              </CardTitle>
-              <CardDescription>
-                Configure language and timezone settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Language</label>
-                <select
-                  value={preferences.language}
-                  onChange={(e) => handlePreferenceChange('language', e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md text-sm"
-                >
-                  <option value="en">English</option>
-                  <option value="es">Español</option>
-                  <option value="fr">Français</option>
-                  <option value="de">Deutsch</option>
-                  <option value="it">Italiano</option>
-                  <option value="pt">Português</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Timezone</label>
-                <select
-                  value={preferences.timezone}
-                  onChange={(e) => handlePreferenceChange('timezone', e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md text-sm"
-                >
-                  <option value="UTC">UTC</option>
-                  <option value="America/New_York">Eastern Time</option>
-                  <option value="America/Chicago">Central Time</option>
-                  <option value="America/Denver">Mountain Time</option>
-                  <option value="America/Los_Angeles">Pacific Time</option>
-                  <option value="Europe/London">London</option>
-                  <option value="Europe/Paris">Paris</option>
-                  <option value="Asia/Tokyo">Tokyo</option>
-                </select>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {setting.label}
+                  </label>
+                  {renderSetting(setting)}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Actions */}
+      {/* Advanced Settings */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.4 }}
+        className="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 rounded-2xl p-8 text-white"
       >
-        <Card>
-          <CardHeader>
-            <CardTitle>Actions</CardTitle>
-            <CardDescription>
-              Manage your settings and preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={handleResetPreferences}
-                icon={<RefreshCw className="h-4 w-4" />}
-              >
-                Reset to Defaults
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleExportSettings}
-                icon={<Download className="h-4 w-4" />}
-              >
-                Export Settings
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsImportModalOpen(true)}
-                icon={<Upload className="h-4 w-4" />}
-              >
-                Import Settings
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Import Settings Modal */}
-      <Modal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        title="Import Settings"
-        description="Import settings from a JSON file"
-        size="md"
-      >
-        <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <label className="block text-sm font-medium mb-2">Select File</label>
-            <input
-              type="file"
-              accept=".json"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  handleImportSettings(file);
-                  setIsImportModalOpen(false);
-                }
-              }}
-              className="w-full px-3 py-2 border rounded-md text-sm"
-            />
+            <div className="flex items-center space-x-3 mb-2">
+              <Shield className="w-6 h-6" />
+              <h3 className="text-xl font-semibold">Advanced Configuration</h3>
+            </div>
+            <p className="text-slate-300">
+              Fine-tune your AI crew performance and behavior settings for optimal results.
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Select a JSON file containing exported settings to import them.
-          </p>
+          <button className="px-6 py-3 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center space-x-2">
+            <Zap className="w-5 h-5" />
+            <span>Advanced Settings</span>
+          </button>
         </div>
-      </Modal>
+      </motion.div>
     </div>
   );
 };
 
-export default Settings; 
+export default Settings;

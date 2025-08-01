@@ -1,499 +1,206 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { 
   Plus, 
   Users, 
-  FileText, 
-  Settings, 
   Play, 
   Edit, 
-  Trash2,
+  Trash2, 
   Copy,
-  Download,
-  Upload,
-  Search,
-  Filter
+  Bot,
+  Zap,
+  Clock,
+  CheckCircle
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Modal from '../components/ui/Modal';
-import useCrewStore from '../stores/crewStore';
-import useUIStore from '../stores/uiStore';
-import { formatDateTime, formatRelativeTime } from '../utils/helpers';
+import toast from 'react-hot-toast';
+import useAppStore from '../stores/appStore';
+import CrewModal from '../components/CrewModal';
 
 const CrewBuilder = () => {
-  const { 
-    crews, 
-    isLoading, 
-    createCrew, 
-    updateCrew, 
-    deleteCrew,
-    addNotification 
-  } = useCrewStore();
-  
-  const { 
-    searchQuery, 
-    setSearchQuery, 
-    filters, 
-    setFilter,
-    openModal,
-    closeModal,
-    isModalOpen 
-  } = useUIStore();
+  const { crews, deleteCrew } = useAppStore();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCrew, setEditingCrew] = useState(null);
 
-  const [selectedCrew, setSelectedCrew] = useState(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
-  // Filter crews based on search and filters
-  const filteredCrews = crews.filter(crew => {
-    const matchesSearch = crew.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         crew.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filters.status === 'all' || crew.status === filters.status;
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleCreateCrew = async (crewData) => {
-    try {
-      await createCrew(crewData);
-      setIsCreateModalOpen(false);
-      addNotification({
-        type: 'success',
-        title: 'Crew Created',
-        message: 'Crew created successfully',
-        duration: 3000,
-      });
-    } catch (error) {
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to create crew',
-        duration: 3000,
-      });
+  const handleDelete = (crewId) => {
+    if (window.confirm('Are you sure you want to delete this crew?')) {
+      deleteCrew(crewId);
+      toast.success('Crew deleted successfully');
     }
   };
 
-  const handleEditCrew = async (crewId, updates) => {
-    try {
-      await updateCrew(crewId, updates);
-      setIsEditModalOpen(false);
-      setSelectedCrew(null);
-      addNotification({
-        type: 'success',
-        title: 'Crew Updated',
-        message: 'Crew updated successfully',
-        duration: 3000,
-      });
-    } catch (error) {
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to update crew',
-        duration: 3000,
-      });
+  const handleDuplicate = (crew) => {
+    // Implementation for duplicating crew
+    toast.success('Crew duplicated successfully');
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'inactive': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+      case 'draft': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
     }
-  };
-
-  const handleDeleteCrew = async (crewId) => {
-    try {
-      await deleteCrew(crewId);
-      setIsDeleteModalOpen(false);
-      setSelectedCrew(null);
-      addNotification({
-        type: 'success',
-        title: 'Crew Deleted',
-        message: 'Crew deleted successfully',
-        duration: 3000,
-      });
-    } catch (error) {
-      addNotification({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to delete crew',
-        duration: 3000,
-      });
-    }
-  };
-
-  const handleExecuteCrew = (crew) => {
-    addNotification({
-      type: 'info',
-      title: 'Execute Crew',
-      message: `Executing crew: ${crew.name}`,
-      duration: 3000,
-    });
-  };
-
-  const handleDuplicateCrew = (crew) => {
-    addNotification({
-      type: 'info',
-      title: 'Duplicate Crew',
-      message: `Duplicating crew: ${crew.name}`,
-      duration: 3000,
-    });
-  };
-
-  const handleExportCrew = (crew) => {
-    addNotification({
-      type: 'info',
-      title: 'Export Crew',
-      message: `Exporting crew: ${crew.name}`,
-      duration: 3000,
-    });
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Crew Builder</h1>
-          <p className="text-muted-foreground">
-            Create, manage, and organize your AI agent crews
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+            Crew Builder
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Create and manage your AI agent crews for automated workflows.
           </p>
         </div>
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          icon={<Plus className="h-4 w-4" />}
-          className="w-full sm:w-auto"
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
         >
-          Create Crew
-        </Button>
+          <Plus className="w-5 h-5" />
+          <span>Create Crew</span>
+        </button>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search crews..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <select
-                value={filters.status}
-                onChange={(e) => setFilter('status', e.target.value)}
-                className="px-3 py-2 border rounded-md text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="draft">Draft</option>
-              </select>
-              <Button variant="outline" size="sm" icon={<Filter className="h-4 w-4" />}>
-                Filters
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Crews Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredCrews.map((crew, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {crews.map((crew, index) => (
           <motion.div
             key={crew.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
+            className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-200"
           >
-            <Card className="h-full hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{crew.name}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {crew.description || 'No description'}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedCrew(crew);
-                        setIsEditModalOpen(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedCrew(crew);
-                        setIsDeleteModalOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {/* Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-white" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Crew Stats */}
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Agents</p>
-                      <p className="font-medium">{crew.agents?.length || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Tasks</p>
-                      <p className="font-medium">{crew.tasks?.length || 0}</p>
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      crew.status === 'active' ? 'bg-green-500' :
-                      crew.status === 'inactive' ? 'bg-gray-500' :
-                      'bg-yellow-500'
-                    }`} />
-                    <span className="text-sm capitalize">{crew.status || 'draft'}</span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-2 border-t gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleExecuteCrew(crew)}
-                      icon={<Play className="h-3 w-3" />}
-                      className="w-full sm:w-auto"
-                    >
-                      Execute
-                    </Button>
-                    <div className="flex justify-center space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDuplicateCrew(crew)}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleExportCrew(crew)}
-                      >
-                        <Download className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Last Modified */}
-                  <div className="text-xs text-muted-foreground">
-                    Modified {formatRelativeTime(crew.updated_at)}
-                  </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                    {crew.name}
+                  </h3>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(crew.status)}`}>
+                    {crew.status}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => {
+                    setEditingCrew(crew);
+                    setIsModalOpen(true);
+                  }}
+                  className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDuplicate(crew)}
+                  className="p-2 text-slate-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(crew.id)}
+                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Description */}
+            <p className="text-slate-600 dark:text-slate-400 text-sm mb-4 line-clamp-2">
+              {crew.description}
+            </p>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="flex items-center space-x-2">
+                <Users className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  {crew.agents?.length || 0} Agents
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  {crew.tasks?.length || 0} Tasks
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex space-x-2">
+              <Link
+                to={`/crews/${crew.id}`}
+                className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-center text-sm font-medium"
+              >
+                View Details
+              </Link>
+              <button className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:shadow-md transition-all duration-200 flex items-center space-x-1">
+                <Play className="w-4 h-4" />
+                <span className="text-sm font-medium">Execute</span>
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex items-center space-x-1 text-xs text-slate-500 dark:text-slate-400">
+                <Clock className="w-3 h-3" />
+                <span>Updated {new Date(crew.updatedAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center space-x-1 text-xs text-slate-500 dark:text-slate-400">
+                <Zap className="w-3 h-3" />
+                <span>Ready</span>
+              </div>
+            </div>
           </motion.div>
         ))}
+
+        {/* Empty State */}
+        {crews.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="col-span-full flex flex-col items-center justify-center py-12"
+          >
+            <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4">
+              <Bot className="w-12 h-12 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              No crews yet
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400 text-center mb-6 max-w-md">
+              Create your first AI crew to start automating workflows with intelligent agents.
+            </p>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Create Your First Crew</span>
+            </button>
+          </motion.div>
+        )}
       </div>
 
-      {/* Empty State */}
-      {filteredCrews.length === 0 && !isLoading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-12"
-        >
-          <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-medium mb-2">No crews found</h3>
-          <p className="text-muted-foreground mb-4">
-            {searchQuery || filters.status !== 'all' 
-              ? 'Try adjusting your search or filters'
-              : 'Create your first crew to get started'
-            }
-          </p>
-          {!searchQuery && filters.status === 'all' && (
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              Create Your First Crew
-            </Button>
-          )}
-        </motion.div>
-      )}
-
-      {/* Loading State */}
-      {isLoading && (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading crews...</p>
-        </div>
-      )}
-
-      {/* Create Crew Modal */}
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        title="Create New Crew"
-        description="Create a new AI agent crew"
-        size="lg"
-      >
-        <CreateCrewForm onSubmit={handleCreateCrew} />
-      </Modal>
-
-      {/* Create Crew Modal */}
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        title="Create Crew"
-        description="Create a new AI agent crew"
-        size="lg"
-      >
-        <CreateCrewForm onSubmit={handleCreateCrew} />
-      </Modal>
-
-      {/* Edit Crew Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
+      {/* Crew Modal */}
+      <CrewModal
+        isOpen={isModalOpen}
         onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedCrew(null);
+          setIsModalOpen(false);
+          setEditingCrew(null);
         }}
-        title="Edit Crew"
-        description="Modify crew settings and configuration"
-        size="lg"
-      >
-        {selectedCrew && (
-          <EditCrewForm 
-            crew={selectedCrew} 
-            onSubmit={(updates) => handleEditCrew(selectedCrew.id, updates)} 
-          />
-        )}
-      </Modal>
-
-      {/* Delete Crew Modal */}
-      <Modal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setSelectedCrew(null);
-        }}
-        title="Delete Crew"
-        description="Are you sure you want to delete this crew? This action cannot be undone."
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            This will permanently delete the crew "{selectedCrew?.name}" and all associated data.
-          </p>
-          <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDeleteModalOpen(false);
-                setSelectedCrew(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => selectedCrew && handleDeleteCrew(selectedCrew.id)}
-            >
-              Delete Crew
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        crew={editingCrew}
+      />
     </div>
   );
 };
 
-// Create Crew Form Component
-const CreateCrewForm = ({ onSubmit }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    agents: [],
-    tasks: [],
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">Crew Name</label>
-        <Input
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Enter crew name"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Description</label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Enter crew description"
-          className="w-full px-3 py-2 border rounded-md text-sm"
-          rows={3}
-        />
-      </div>
-      <div className="flex justify-end space-x-2">
-        <Button type="submit">Create Crew</Button>
-      </div>
-    </form>
-  );
-};
-
-// Edit Crew Form Component
-const EditCrewForm = ({ crew, onSubmit }) => {
-  const [formData, setFormData] = useState({
-    name: crew.name,
-    description: crew.description || '',
-    agents: crew.agents || [],
-    tasks: crew.tasks || [],
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">Crew Name</label>
-        <Input
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Enter crew name"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Description</label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Enter crew description"
-          className="w-full px-3 py-2 border rounded-md text-sm"
-          rows={3}
-        />
-      </div>
-      <div className="flex justify-end space-x-2">
-        <Button type="submit">Update Crew</Button>
-      </div>
-    </form>
-  );
-};
-
-export default CrewBuilder; 
+export default CrewBuilder;

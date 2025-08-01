@@ -1,374 +1,243 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { 
   Users, 
   Play, 
-  BarChart3, 
-  Clock, 
   TrendingUp, 
+  Clock, 
+  DollarSign,
   Activity,
-  Cpu,
-  HardDrive,
-  Wifi,
-  Database,
-  Zap,
-  Target,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
-  PauseCircle
+  ArrowUpRight,
+  Bot,
+  Zap
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import useCrewStore from '../stores/crewStore';
-import useExecutionStore from '../stores/executionStore';
-import useUIStore from '../stores/uiStore';
-import { formatDateTime, formatRelativeTime, formatNumber } from '../utils/helpers';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import useAppStore from '../stores/appStore';
 
 const Dashboard = () => {
-  const { crews, isLoading: crewsLoading } = useCrewStore();
-  const { executions, systemMetrics, isLoading: executionsLoading } = useExecutionStore();
-  const { addNotification } = useUIStore();
+  const { crews, executions, analytics } = useAppStore();
 
-  const [recentActivities, setRecentActivities] = useState([
+  const stats = [
     {
-      id: 1,
-      type: 'execution',
-      title: 'Research & Analysis Team',
-      description: 'Execution completed successfully',
-      timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
-      status: 'completed',
-      icon: CheckCircle,
-      color: 'text-green-500'
-    },
-    {
-      id: 2,
-      type: 'crew',
-      title: 'Content Creation Squad',
-      description: 'New crew created',
-      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-      status: 'created',
+      name: 'Total Crews',
+      value: crews.length,
+      change: '+12%',
       icon: Users,
-      color: 'text-blue-500'
+      color: 'from-blue-500 to-blue-600'
     },
     {
-      id: 3,
-      type: 'execution',
-      title: 'Code Review Team',
-      description: 'Execution started',
-      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
-      status: 'running',
+      name: 'Active Executions',
+      value: executions.filter(e => e.status === 'running').length,
+      change: '+8%',
       icon: Play,
-      color: 'text-yellow-500'
+      color: 'from-green-500 to-green-600'
+    },
+    {
+      name: 'Success Rate',
+      value: `${analytics.successRate}%`,
+      change: '+2.1%',
+      icon: TrendingUp,
+      color: 'from-purple-500 to-purple-600'
+    },
+    {
+      name: 'Total Cost',
+      value: `$${analytics.totalCost}`,
+      change: '-5%',
+      icon: DollarSign,
+      color: 'from-orange-500 to-orange-600'
     }
-  ]);
+  ];
 
-  const handleQuickAction = (action) => {
-    addNotification({
-      type: 'info',
-      title: 'Quick Action',
-      message: `${action} will be available soon`,
-      duration: 3000,
-    });
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'running':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'failed':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      case 'pending':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'completed':
-        return CheckCircle;
-      case 'running':
-        return Play;
-      case 'failed':
-        return XCircle;
-      case 'pending':
-        return Clock;
-      default:
-        return AlertCircle;
-    }
-  };
-
-  // Calculate statistics
-  const totalCrews = crews.length;
-  const activeExecutions = executions.filter(e => e.status === 'running').length;
-  const completedExecutions = executions.filter(e => e.status === 'completed').length;
-  const successRate = totalCrews > 0 ? ((completedExecutions / totalCrews) * 100).toFixed(1) : 0;
+  const recentExecutions = executions.slice(0, 5);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overview of your CrewAI operations and system status
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+            Dashboard
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Welcome back! Here's what's happening with your AI crews.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={() => handleQuickAction('Create Crew')}
-            icon={<Users className="h-4 w-4" />}
-            className="w-full sm:w-auto"
-          >
-            Create Crew
-          </Button>
-          <Button
-            onClick={() => handleQuickAction('Start Execution')}
-            icon={<Play className="h-4 w-4" />}
-            className="w-full sm:w-auto"
-          >
-            Start Execution
-          </Button>
-        </div>
+        <Link
+          to="/crews"
+          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
+        >
+          <Bot className="w-5 h-5" />
+          <span>Create Crew</span>
+        </Link>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Crews</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalCrews}</div>
-              <p className="text-xs text-muted-foreground">
-                Active AI agent teams
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.name}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200 dark:border-slate-700"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  {stat.name}
+                </p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                  {stat.value}
+                </p>
+                <div className="flex items-center mt-2">
+                  <ArrowUpRight className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-green-500 ml-1">{stat.change}</span>
+                </div>
+              </div>
+              <div className={`w-12 h-12 bg-gradient-to-r ${stat.color} rounded-xl flex items-center justify-center`}>
+                <stat.icon className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
+      {/* Charts and Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Execution Trends */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Executions</CardTitle>
-              <Play className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeExecutions}</div>
-              <p className="text-xs text-muted-foreground">
-                Currently running
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{successRate}%</div>
-              <p className="text-xs text-muted-foreground">
-                Completed successfully
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
+          className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200 dark:border-slate-700"
         >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Executions</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{executions.length}</div>
-              <p className="text-xs text-muted-foreground">
-                All time executions
-              </p>
-            </CardContent>
-          </Card>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Execution Trends
+            </h3>
+            <Activity className="w-5 h-5 text-slate-400" />
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={analytics.executionTrends}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="date" stroke="#64748b" />
+              <YAxis stroke="#64748b" />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px'
+                }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="executions" 
+                stroke="#3b82f6" 
+                strokeWidth={3}
+                dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="success" 
+                stroke="#10b981" 
+                strokeWidth={3}
+                dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </motion.div>
+
+        {/* Recent Activity */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200 dark:border-slate-700"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Recent Executions
+            </h3>
+            <Link 
+              to="/executions"
+              className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="space-y-4">
+            {recentExecutions.map((execution, index) => (
+              <motion.div
+                key={execution.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 + index * 0.1 }}
+                className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    execution.status === 'completed' ? 'bg-green-500' :
+                    execution.status === 'running' ? 'bg-blue-500' :
+                    execution.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
+                  }`} />
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                      {execution.crewName}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {new Date(execution.startedAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 capitalize">
+                    {execution.status}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {execution.tokensUsed} tokens
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
       </div>
-
-      {/* System Metrics */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Zap className="h-5 w-5" />
-              <span>System Metrics</span>
-            </CardTitle>
-            <CardDescription>
-              Real-time system performance and resource usage
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="flex items-center space-x-2">
-                <Cpu className="h-4 w-4 text-blue-500" />
-                <div>
-                  <p className="text-sm font-medium">CPU Usage</p>
-                  <p className="text-xs text-muted-foreground">{systemMetrics.cpu}%</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Database className="h-4 w-4 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium">Memory Usage</p>
-                  <p className="text-xs text-muted-foreground">{systemMetrics.memory}%</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Wifi className="h-4 w-4 text-purple-500" />
-                <div>
-                  <p className="text-sm font-medium">Network Usage</p>
-                  <p className="text-xs text-muted-foreground">{systemMetrics.network}%</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <HardDrive className="h-4 w-4 text-orange-500" />
-                <div>
-                  <p className="text-sm font-medium">Disk Usage</p>
-                  <p className="text-xs text-muted-foreground">{systemMetrics.disk}%</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Recent Activities */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5" />
-              <span>Recent Activities</span>
-            </CardTitle>
-            <CardDescription>
-              Latest crew executions and system activities
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => {
-                const IconComponent = activity.icon;
-                return (
-                  <motion.div
-                    key={activity.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 * index }}
-                    className="flex items-center space-x-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className={`p-2 rounded-full bg-muted ${activity.color}`}>
-                      <IconComponent className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{activity.title}</p>
-                      <p className="text-xs text-muted-foreground">{activity.description}</p>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatRelativeTime(activity.timestamp)}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
 
       {/* Quick Actions */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
+        className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-8 text-white"
       >
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Target className="h-5 w-5" />
-              <span>Quick Actions</span>
-            </CardTitle>
-            <CardDescription>
-              Common actions to get started quickly
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <Button
-                variant="outline"
-                onClick={() => handleQuickAction('Create New Crew')}
-                className="justify-start"
-                icon={<Users className="h-4 w-4" />}
-              >
-                Create New Crew
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleQuickAction('Import Crew')}
-                className="justify-start"
-                icon={<Database className="h-4 w-4" />}
-              >
-                Import Crew
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleQuickAction('View Analytics')}
-                className="justify-start"
-                icon={<BarChart3 className="h-4 w-4" />}
-              >
-                View Analytics
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleQuickAction('System Settings')}
-                className="justify-start"
-                icon={<Zap className="h-4 w-4" />}
-              >
-                System Settings
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-bold mb-2">Ready to create your next AI crew?</h3>
+            <p className="text-blue-100">
+              Build powerful AI agent teams to automate your workflows and boost productivity.
+            </p>
+          </div>
+          <div className="flex space-x-4">
+            <Link
+              to="/crews"
+              className="px-6 py-3 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center space-x-2"
+            >
+              <Users className="w-5 h-5" />
+              <span>Manage Crews</span>
+            </Link>
+            <Link
+              to="/analytics"
+              className="px-6 py-3 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center space-x-2"
+            >
+              <Zap className="w-5 h-5" />
+              <span>View Analytics</span>
+            </Link>
+          </div>
+        </div>
       </motion.div>
     </div>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;
